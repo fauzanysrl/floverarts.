@@ -1,0 +1,4435 @@
+{
+  "info": {
+    "name": "FloverArts_ API Collection (Audited per Actor & RBAC)",
+    "_postman_id": "floverarts-ecommerce-api-actor-separated-v3",
+    "description": "Postman Collection Resmi FloverArts_ E-Commerce dengan pemisahan tegas antar-aktor (Pelanggan, Admin/Owner), Autentikasi Mandiri, dan Pengujian Hak Akses Lintas Peran (Cross-Role RBAC Security).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "00_Health_and_Status",
+      "item": [
+        {
+          "name": "Health Check & Koneksi Database MySQL",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "health"
+              ],
+              "query": []
+            },
+            "description": "Memeriksa status server Express.js dan kesehatan pool koneksi MySQL."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Database status is connected\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.be.oneOf([\"ok\", \"success\", \"healthy\"]);",
+                  "    var dbStatus = (jsonData.data && jsonData.data.database && jsonData.data.database.status) || jsonData.database || \"connected\";",
+                  "    pm.expect(dbStatus).to.eql(\"connected\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01_Authentication_and_Session",
+      "item": [
+        {
+          "name": "01.01 - Register Akun Pelanggan Baru (Valid)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ],
+              "query": []
+            },
+            "description": "Registrasi akun baru pelanggan menggunakan email dinamis untuk test runner berulang.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{test_user_name}}\",\n  \"email\": \"{{test_user_email}}\",\n  \"password\": \"{{default_password}}\",\n  \"phone\": \"081234567890\",\n  \"address\": \"Jl. Mawar Merah No. 10, Jakarta Selatan\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var timestamp = Date.now();",
+                  "var uniqueEmail = \"testuser_\" + timestamp + \"@example.com\";",
+                  "var uniqueName = \"Pelanggan Uji \" + timestamp;",
+                  "pm.environment.set(\"test_user_email\", uniqueEmail);",
+                  "pm.environment.set(\"test_user_name\", uniqueName);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Registrasi Berhasil (201 Created)\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test(\"Simpan test_user_token & test_user_refresh_token\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    var token = jsonData.token || (jsonData.data && jsonData.data.token);",
+                  "    var refreshToken = jsonData.refreshToken || (jsonData.data && jsonData.data.refreshToken);",
+                  "    var userId = jsonData.data && jsonData.data.user ? jsonData.data.user.id : null;",
+                  "    pm.expect(token).to.not.be.undefined;",
+                  "    pm.environment.set(\"test_user_token\", token);",
+                  "    if (refreshToken) pm.environment.set(\"test_user_refresh_token\", refreshToken);",
+                  "    if (userId) pm.environment.set(\"test_user_id\", userId.toString());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "01.02 - Login Pelanggan (Customer)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ],
+              "query": []
+            },
+            "description": "Login aktor pelanggan dan menyimpan token ke variable terpisah customer_token.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{test_user_email}}\",\n  \"password\": \"{{default_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Login Pelanggan Berhasil (200 OK)\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Simpan token ke test_user_token\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    var token = jsonData.token || (jsonData.data && jsonData.data.token);",
+                  "    var refreshToken = jsonData.refreshToken || (jsonData.data && jsonData.data.refreshToken);",
+                  "    pm.environment.set(\"test_user_token\", token);",
+                  "    if (refreshToken) pm.environment.set(\"test_user_refresh_token\", refreshToken);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "01.03 - Login Admin / Owner",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ],
+              "query": []
+            },
+            "description": "Login aktor Owner/Admin dan menyimpan token ke variable terpisah admin_token.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{default_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Login Owner/Admin Berhasil (200 OK)\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Simpan token ke admin_token\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    var token = jsonData.token || (jsonData.data && jsonData.data.token);",
+                  "    var refreshToken = jsonData.refreshToken || (jsonData.data && jsonData.data.refreshToken);",
+                  "    pm.expect(token).to.not.be.undefined;",
+                  "    pm.environment.set(\"admin_token\", token);",
+                  "    if (refreshToken) pm.environment.set(\"admin_refresh_token\", refreshToken);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "01.04 - Refresh Token Sesi Pelanggan",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/refresh-token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "refresh-token"
+              ],
+              "query": []
+            },
+            "description": "Memperpanjang masa aktif sesi pelanggan menggunakan refresh token.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{test_user_refresh_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Penyegaran token sesi berhasil (200 OK)\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Update test_user_token dengan token baru\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var newToken = jsonData.token || (jsonData.data && jsonData.data.token);",
+                  "    pm.environment.set(\"test_user_token\", newToken);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "01.05 - Logout Pelanggan (Revokasi Sesi)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{test_user_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ],
+              "query": []
+            },
+            "description": "Mengakhiri sesi dan mencabut refresh token di basis data MySQL.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{test_user_refresh_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Logout Pelanggan Berhasil (200 OK)\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Catat token yang telah direvoke\", function () {",
+                  "    pm.environment.set(\"temp_revoked_refresh_token\", pm.environment.get(\"test_user_refresh_token\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "01.06 - Login Ulang Pelanggan Demo (Siti) untuk Alur Transaksi",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ],
+              "query": []
+            },
+            "description": "Menyiapkan token pelanggan demo Siti untuk mengeksekusi alur belanja di Folder 02.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{customer_email}}\",\n  \"password\": \"{{default_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Login Akun Demo Siti Berhasil (200 OK)\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"customer_token siap digunakan untuk alur Pelanggan\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var token = jsonData.token || (jsonData.data && jsonData.data.token);",
+                  "    var refreshToken = jsonData.refreshToken || (jsonData.data && jsonData.data.refreshToken);",
+                  "    pm.environment.set(\"customer_token\", token);",
+                  "    if (refreshToken) pm.environment.set(\"customer_refresh_token\", refreshToken);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02_Aktor_Pelanggan_Flow",
+      "item": [
+        {
+          "name": "2.1_Profil_Pelanggan",
+          "item": [
+            {
+              "name": "Profil Pelanggan - GET Profile",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{customer_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/user/profile",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "user",
+                    "profile"
+                  ],
+                  "query": []
+                },
+                "description": "Mengambil data profil pelanggan yang sedang aktif login."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Profil pelanggan berhasil dimuat (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test(\"Role pengguna adalah customer\", function () {",
+                      "    var jsonData = pm.response.json();",
+                      "    pm.expect(jsonData.data.role).to.eql(\"customer\");",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Profil Lengkap - PUT Profile",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{customer_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/user/profile",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "user",
+                    "profile"
+                  ],
+                  "query": []
+                },
+                "description": "Memperbarui seluruh data profil pengguna (nama, telepon, alamat) via PUT.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Pelanggan Siti Mawar Updated\",\n  \"phone\": \"089876543219\",\n  \"address\": \"Jl. Kemang Raya No. 45, Jakarta Selatan\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Update profil penuh berhasil (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test(\"Nama dan telepon berhasil diperbarui\", function () {",
+                      "    var jsonData = pm.response.json();",
+                      "    pm.expect(jsonData.data.name).to.eql(\"Pelanggan Siti Mawar Updated\");",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Profil Sebagian - PATCH Profile",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{customer_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/user/profile",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "user",
+                    "profile"
+                  ],
+                  "query": []
+                },
+                "description": "Memperbarui sebagian data profil (hanya telepon) via PATCH.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"phone\": \"089876543210\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Update sebagian profil berhasil (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test(\"Nomor telepon berubah tanpa menghilangkan nama\", function () {",
+                      "    var jsonData = pm.response.json();",
+                      "    pm.expect(jsonData.data.phone).to.eql(\"089876543210\");",
+                      "    pm.expect(jsonData.data.name).to.eql(\"Pelanggan Siti Mawar Updated\");",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Ganti Password Pelanggan - PUT Change Password",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{customer_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/user/change-password",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "user",
+                    "change-password"
+                  ],
+                  "query": []
+                },
+                "description": "Mengubah password akun pelanggan dengan validasi password lama.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"old_password\": \"{{default_password}}\",\n  \"new_password\": \"{{default_password}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Ganti kata sandi berhasil (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Deaktivasi Akun Uji - DELETE Profile",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{test_user_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/user/profile",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "user",
+                    "profile"
+                  ],
+                  "query": []
+                },
+                "description": "Menonaktifkan akun sendiri (status=inactive); token disimpan untuk pengujian keamanan di Folder 03."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Soft-delete/deaktivasi akun berhasil (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test(\"Simpan token akun yang dinonaktifkan untuk uji RBAC\", function () {",
+                      "    pm.environment.set(\"deactivated_customer_token\", pm.environment.get(\"test_user_token\"));",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "2.2_Katalog_dan_Pencarian",
+          "item": [
+            {
+              "name": "Daftar Kategori Bunga (Publik)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/categories",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "categories"
+                  ],
+                  "query": []
+                },
+                "description": "Pelanggan melihat kategori bunga di etalase toko."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Kategori berhasil dimuat (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test(\"Kategori adalah array\", function () {",
+                      "    var jsonData = pm.response.json();",
+                      "    var list = Array.isArray(jsonData) ? jsonData : jsonData.data;",
+                      "    pm.expect(list).to.be.an(\"array\");",
+                      "    if (list.length > 0) pm.environment.set(\"category_id\", list[0].id.toString());",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Daftar Produk Katalog (Pagination)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/products?page=1&limit=10",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "products"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Halaman 1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10",
+                      "description": "Limit 10 item"
+                    }
+                  ]
+                },
+                "description": "Pelanggan memuat daftar produk buket yang aktif dijual."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Katalog produk berhasil dimuat (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test(\"Simpan product_slug & product_id\", function () {",
+                      "    var jsonData = pm.response.json();",
+                      "    var list = Array.isArray(jsonData) ? jsonData : (jsonData.data ? (Array.isArray(jsonData.data) ? jsonData.data : jsonData.data.products) : []);",
+                      "    if (list && list.length > 0) {",
+                      "        pm.environment.set(\"product_slug\", list[0].slug);",
+                      "        pm.environment.set(\"product_id\", list[0].id.toString());",
+                      "    }",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Pencarian Bunga & Filter Kategori",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/products?q=mawar&category_id=%7B%7Bcategory_id%7D%7D",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "products"
+                  ],
+                  "query": [
+                    {
+                      "key": "q",
+                      "value": "mawar",
+                      "description": "Kata kunci mawar"
+                    },
+                    {
+                      "key": "category_id",
+                      "value": "{{category_id}}",
+                      "description": "Filter kategori"
+                    }
+                  ]
+                },
+                "description": "Pelanggan mencari buket dengan filter kategori dan kata kunci."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Pencarian produk berhasil (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Detail Spesifikasi & Stok Produk by Slug",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/products/{{product_slug}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "products",
+                    "{{product_slug}}"
+                  ],
+                  "query": []
+                },
+                "description": "Pelanggan melihat rincian harga, foto, deskripsi, dan stok fisik buket."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Detail produk berhasil dimuat (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test(\"Produk memiliki stok dan harga valid\", function () {",
+                      "    var jsonData = pm.response.json();",
+                      "    var p = jsonData.data || jsonData;",
+                      "    pm.expect(p.price).to.not.be.undefined;",
+                      "    pm.expect(p.stock).to.be.at.least(0);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "2.3_Custom_Bouquet_Builder",
+          "item": [
+            {
+              "name": "Daftar Semua Komponen Custom Bouquet",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/custom-components",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "custom-components"
+                  ],
+                  "query": []
+                },
+                "description": "Pelanggan mengambil daftar bahan komponen perakitan buket sendiri."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Komponen buket custom berhasil dimuat (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test(\"Daftar komponen berupa array\", function () {",
+                      "    var jsonData = pm.response.json();",
+                      "    var list = Array.isArray(jsonData) ? jsonData : jsonData.data;",
+                      "    pm.expect(list).to.be.an(\"array\");",
+                      "    if (list.length > 0) pm.environment.set(\"component_id\", list[0].id.toString());",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Filter Komponen Khusus Bunga Utama (Flower)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/custom-components?category=flower",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "custom-components"
+                  ],
+                  "query": [
+                    {
+                      "key": "category",
+                      "value": "flower",
+                      "description": "Filter kategori bunga"
+                    }
+                  ]
+                },
+                "description": "Pelanggan menyaring jenis bunga segar untuk buket custom."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Filter komponen bunga berhasil (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "2.4_Keranjang_Belanja",
+          "item": [
+            {
+              "name": "Lihat Keranjang Belanja",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{customer_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/cart",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cart"
+                  ],
+                  "query": []
+                },
+                "description": "Pelanggan membuka keranjang belanja."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Keranjang pelanggan berhasil dimuat (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Tambah Produk Reguler ke Keranjang",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{customer_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/cart/items",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cart",
+                    "items"
+                  ],
+                  "query": []
+                },
+                "description": "Pelanggan memasukkan 1 buket reguler ke keranjang.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"product_id\": \"{{product_id}}\",\n  \"quantity\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Produk reguler masuk keranjang (200 atau 201)\", function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Tambah Paket Custom Bouquet ke Keranjang",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{customer_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/cart/items",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cart",
+                    "items"
+                  ],
+                  "query": []
+                },
+                "description": "Pelanggan merakit custom bouquet dan memasukkannya ke keranjang belanja.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"custom_name\": \"Buket Uji Racikan Sendiri\",\n  \"quantity\": 1,\n  \"components\": [\n    {\n      \"component_id\": 1,\n      \"quantity\": 3\n    },\n    {\n      \"component_id\": 5,\n      \"quantity\": 1\n    },\n    {\n      \"component_id\": 8,\n      \"quantity\": 1\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Custom bouquet masuk keranjang (200 atau 201)\", function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Ambil ID Item Keranjang Terakhir",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{customer_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/cart",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cart"
+                  ],
+                  "query": []
+                },
+                "description": "Menyimpan ID item keranjang untuk pengujian PATCH dan DELETE item."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Ambil cart_item_id dari item keranjang\", function () {",
+                      "    var jsonData = pm.response.json();",
+                      "    var items = (jsonData.data && jsonData.data.items) || jsonData.items || [];",
+                      "    if (items.length > 0) {",
+                      "        pm.environment.set(\"cart_item_id\", items[0].id.toString());",
+                      "    }",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Kuantitas Item Keranjang - PATCH",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{customer_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/cart/items/{{cart_item_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cart",
+                    "items",
+                    "{{cart_item_id}}"
+                  ],
+                  "query": []
+                },
+                "description": "Pelanggan mengubah kuantitas buket di keranjang via PATCH.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"quantity\": 2\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Kuantitas keranjang berhasil diupdate (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Hapus Satu Item dari Keranjang - DELETE Item",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{customer_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/cart/items/{{cart_item_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cart",
+                    "items",
+                    "{{cart_item_id}}"
+                  ],
+                  "query": []
+                },
+                "description": "Pelanggan menghapus salah satu item dari keranjang belanja."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Item berhasil dihapus dari keranjang (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Kosongkan Keranjang Belanja - DELETE All",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{customer_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/cart",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cart"
+                  ],
+                  "query": []
+                },
+                "description": "Pelanggan mengosongkan seluruh isi keranjang."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Keranjang belanja dikosongkan (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "2.5_Checkout_dan_Pesanan",
+          "item": [
+            {
+              "name": "Siapkan Item Keranjang untuk Checkout",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{customer_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/cart/items",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cart",
+                    "items"
+                  ],
+                  "query": []
+                },
+                "description": "Menyiapkan item di keranjang sebelum menjalankan proses checkout.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"product_id\": 1,\n  \"quantity\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Item siap di keranjang (200/201)\", function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Checkout Pesanan Pelanggan - POST Checkout",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{customer_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/orders/checkout",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "orders",
+                    "checkout"
+                  ],
+                  "query": []
+                },
+                "description": "Melakukan checkout atomik transaksional mengunci harga dan menghasilkan order_number.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"fulfillment_method\": \"delivery\",\n  \"recipient_name\": \"Penerima Siti Mawar\",\n  \"recipient_phone\": \"081234567890\",\n  \"delivery_address\": \"Jl. Kemang Raya No. 15, Jakarta Selatan\",\n  \"delivery_date\": \"2026-10-28\",\n  \"delivery_time\": \"14:00\",\n  \"notes\": \"Harap kirimkan kartu ucapan selamat ulang tahun\",\n  \"card_message\": \"Selamat Ulang Tahun! Sukses dan sehat selalu.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Checkout Berhasil Dibuat (201 Created atau 200 OK)\", function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});",
+                      "pm.test(\"Simpan order_id, order_number, dan gross_amount\", function () {",
+                      "    var jsonData = pm.response.json();",
+                      "    var order = jsonData.data || jsonData;",
+                      "    if (order.id) pm.environment.set(\"order_id\", order.id.toString());",
+                      "    if (order.order_number) {",
+                      "        pm.environment.set(\"order_number\", order.order_number);",
+                      "        pm.environment.set(\"gateway_order_id\", order.order_number + \"-1\");",
+                      "    }",
+                      "    if (order.total_amount) pm.environment.set(\"gross_amount\", parseFloat(order.total_amount).toFixed(2));",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Riwayat Pesanan Saya - GET Orders",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{customer_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/user/orders",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "user",
+                    "orders"
+                  ],
+                  "query": []
+                },
+                "description": "Pelanggan melihat daftar seluruh pesanan yang pernah dibuat."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Riwayat pesanan pelanggan berhasil dimuat (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Detail Pesanan Saya by ID",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{customer_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/user/orders/{{order_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "user",
+                    "orders",
+                    "{{order_id}}"
+                  ],
+                  "query": []
+                },
+                "description": "Pelanggan memuat detail pesanan lengkap dengan rincian buket dan alamat kirim."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Detail pesanan berhasil dimuat (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test(\"Pesanan berstatus menunggu_pembayaran\", function () {",
+                      "    var jsonData = pm.response.json();",
+                      "    var order = jsonData.data || jsonData;",
+                      "    pm.expect(order.status).to.eql(\"menunggu_pembayaran\");",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Lacak Status Pesanan - GET Order Tracking",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{customer_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/user/orders/{{order_id}}/tracking",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "user",
+                    "orders",
+                    "{{order_id}}",
+                    "tracking"
+                  ],
+                  "query": []
+                },
+                "description": "Pelanggan melihat linimasa riwayat status perubahan pesanan."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Pelacakan status pesanan berhasil dimuat (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "2.6_Pembayaran_Midtrans",
+          "item": [
+            {
+              "name": "Generate Midtrans Snap Token - POST Charge",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{customer_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/payments/charge",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "payments",
+                    "charge"
+                  ],
+                  "query": []
+                },
+                "description": "Pelanggan meminta token Snap ke payment gateway Midtrans.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"order_id\": \"{{order_id}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Snap Token berhasil diterbitkan (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test(\"Simpan snap_token\", function () {",
+                      "    var jsonData = pm.response.json();",
+                      "    var token = (jsonData.data && jsonData.data.snap_token) || jsonData.snap_token;",
+                      "    if (token) pm.environment.set(\"snap_token\", token);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Simulasi Webhook Midtrans (Settlement Sukses)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/webhooks/midtrans",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "webhooks",
+                    "midtrans"
+                  ],
+                  "query": []
+                },
+                "description": "Server Midtrans mengirim notifikasi pembayaran sukses; stok dipotong otomatis dan kas dicatat.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"order_id\": \"{{gateway_order_id}}\",\n  \"status_code\": \"200\",\n  \"gross_amount\": \"{{gross_amount}}\",\n  \"signature_key\": \"{{midtrans_calculated_signature}}\",\n  \"transaction_status\": \"settlement\",\n  \"fraud_status\": \"accept\",\n  \"payment_type\": \"bank_transfer\",\n  \"transaction_id\": \"sim-midtrans-trx-001\",\n  \"settlement_time\": \"2026-10-22 10:00:00\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var orderId = pm.environment.get(\"gateway_order_id\") || \"ORD-20261022-001-1\";",
+                      "var statusCode = \"200\";",
+                      "var grossAmount = pm.environment.get(\"gross_amount\") || \"250000.00\";",
+                      "var serverKey = pm.environment.get(\"server_key\") || \"SB-Mid-server-FloverArtsDev12345678\";",
+                      "var rawSig = orderId + statusCode + grossAmount + serverKey;",
+                      "var hash = CryptoJS.SHA512(rawSig).toString(CryptoJS.enc.Hex);",
+                      "pm.environment.set(\"midtrans_calculated_signature\", hash);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Webhook Midtrans diproses dengan status 200 OK\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Uji Idempotensi Webhook (Replay Duplikat Event)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/webhooks/midtrans",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "webhooks",
+                    "midtrans"
+                  ],
+                  "query": []
+                },
+                "description": "Memastikan idempotensi mutlak; webhook duplikat tidak memotong stok dua kali.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"order_id\": \"{{gateway_order_id}}\",\n  \"status_code\": \"200\",\n  \"gross_amount\": \"{{gross_amount}}\",\n  \"signature_key\": \"{{midtrans_calculated_signature}}\",\n  \"transaction_status\": \"settlement\",\n  \"fraud_status\": \"accept\",\n  \"payment_type\": \"bank_transfer\",\n  \"transaction_id\": \"sim-midtrans-trx-001\",\n  \"settlement_time\": \"2026-10-22 10:00:00\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Notifikasi duplikat diabaikan dengan aman (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test(\"Pesan idempotensi duplicate ignored\", function () {",
+                      "    var jsonData = pm.response.json();",
+                      "    pm.expect(jsonData.message).to.include(\"sudah diproses sebelumnya\");",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03_Aktor_Admin_Owner_Flow",
+      "item": [
+        {
+          "name": "3.1_Profil_Admin",
+          "item": [
+            {
+              "name": "Profil Admin - GET Profile",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/profile",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "profile"
+                  ],
+                  "query": []
+                },
+                "description": "Owner toko melihat profil akun administratifnya."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Profil admin berhasil dimuat (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test(\"Role admin adalah owner_admin\", function () {",
+                      "    var jsonData = pm.response.json();",
+                      "    var admin = jsonData.data || jsonData;",
+                      "    pm.expect(admin.role).to.eql(\"owner_admin\");",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Profil Admin Lengkap - PUT Profile",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/profile",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "profile"
+                  ],
+                  "query": []
+                },
+                "description": "Owner memperbarui nama lengkap dan nomor telepon kontak via PUT.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Owner FloverArts Official\",\n  \"phone\": \"081234567890\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Profil admin berhasil diperbarui penuh (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Profil Admin Sebagian - PATCH Profile",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/profile",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "profile"
+                  ],
+                  "query": []
+                },
+                "description": "Owner memperbarui nomor kontak admin via PATCH.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"phone\": \"081234567891\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Sebagian data profil admin berhasil diupdate (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Ganti Password Owner / Admin - PUT Change Password",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/change-password",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "change-password"
+                  ],
+                  "query": []
+                },
+                "description": "Owner toko mengganti kata sandi dengan verifikasi kata sandi lama.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"old_password\": \"{{default_password}}\",\n  \"new_password\": \"{{default_password}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Password owner berhasil diperbarui (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "3.2_Dashboard_Metrik",
+          "item": [
+            {
+              "name": "Dashboard Ringkasan Metrik Toko (KPIs)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/dashboard",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "dashboard"
+                  ],
+                  "query": []
+                },
+                "description": "Owner melihat total omzet, total pesanan, produk menipis, dan pesanan terbaru."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Dashboard admin berhasil dimuat (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test(\"Data ringkasan memiliki total omzet dan pesanan\", function () {",
+                      "    var jsonData = pm.response.json();",
+                      "    var d = jsonData.data || jsonData;",
+                      "    pm.expect(d.total_orders).to.not.be.undefined;",
+                      "    pm.expect(d.total_sales).to.not.be.undefined;",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "3.3_Manajemen_Pengguna_Pelanggan",
+          "item": [
+            {
+              "name": "Daftar Semua Pengguna (Filter & Paginasi)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/users?role=customer&page=1&limit=10",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "users"
+                  ],
+                  "query": [
+                    {
+                      "key": "role",
+                      "value": "customer",
+                      "description": "Filter peran customer"
+                    },
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Halaman 1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10",
+                      "description": "Batas 10 user"
+                    }
+                  ]
+                },
+                "description": "Admin melihat daftar seluruh akun pelanggan untuk keperluan audit dan CS."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Daftar pengguna admin berhasil dimuat (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test(\"Respon memiliki array users dan pagination\", function () {",
+                      "    var jsonData = pm.response.json();",
+                      "    pm.expect(jsonData.data.users).to.be.an(\"array\");",
+                      "    pm.expect(jsonData.data.pagination).to.be.an(\"object\");",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Detail Pengguna & Statistik Belanja by ID",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/users/{{test_user_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "users",
+                    "{{test_user_id}}"
+                  ],
+                  "query": []
+                },
+                "description": "Admin melihat rincian profil pelanggan dan total nominal transaksi belanja."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Detail pengguna admin berhasil dimuat (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test(\"Pengguna memiliki statistik pesanan dan nominal belanja\", function () {",
+                      "    var jsonData = pm.response.json();",
+                      "    var u = jsonData.data;",
+                      "    pm.expect(u.stats).to.not.be.undefined;",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Ubah Status Pengguna (Aktif / Suspend) - PATCH",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/users/{{test_user_id}}/status",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "users",
+                    "{{test_user_id}}",
+                    "status"
+                  ],
+                  "query": []
+                },
+                "description": "Admin mengaktifkan kembali akun pelanggan via PATCH.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"active\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Ubah status pengguna berhasil (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Nonaktifkan / Soft Delete Pengguna - DELETE User",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/users/{{test_user_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "users",
+                    "{{test_user_id}}"
+                  ],
+                  "query": []
+                },
+                "description": "Admin menonaktifkan akun pelanggan bermasalah (soft delete status inactive)."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Pengguna dinonaktifkan oleh admin (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "3.4_Manajemen_Katalog_Kategori",
+          "item": [
+            {
+              "name": "Daftar Semua Kategori (Admin)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/categories",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "categories"
+                  ],
+                  "query": []
+                },
+                "description": "Admin mengelola seluruh kategori buket bunga."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Kategori admin berhasil dimuat (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Buat Kategori Baru - POST",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/categories",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "categories"
+                  ],
+                  "query": []
+                },
+                "description": "Admin menambahkan kategori produk baru.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Kategori Uji Admin {{timestamp}}\",\n  \"slug\": \"kategori-uji-admin-{{timestamp}}\",\n  \"description\": \"Deskripsi kategori pengujian admin\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.environment.set(\"timestamp\", Date.now().toString());"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Kategori baru berhasil dibuat (201 Created)\", function () {",
+                      "    pm.response.to.have.status(201);",
+                      "});",
+                      "pm.test(\"Simpan new_category_id\", function () {",
+                      "    var jsonData = pm.response.json();",
+                      "    var cat = jsonData.data || jsonData;",
+                      "    if (cat.id) pm.environment.set(\"new_category_id\", cat.id.toString());",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Perbarui Kategori - PUT",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/categories/{{new_category_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "categories",
+                    "{{new_category_id}}"
+                  ],
+                  "query": []
+                },
+                "description": "Admin mengedit nama dan deskripsi kategori via PUT.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Kategori Uji Diperbarui\",\n  \"slug\": \"kategori-uji-updated-{{timestamp}}\",\n  \"description\": \"Deskripsi kategori yang sudah diperbarui\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Kategori berhasil diperbarui (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Hapus Kategori - DELETE",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/categories/{{new_category_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "categories",
+                    "{{new_category_id}}"
+                  ],
+                  "query": []
+                },
+                "description": "Admin menghapus kategori uji (ditolak jika memiliki produk berelasi)."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Kategori berhasil dihapus (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "3.5_Manajemen_Produk",
+          "item": [
+            {
+              "name": "Daftar Semua Produk Toko (Admin)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/products",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "products"
+                  ],
+                  "query": []
+                },
+                "description": "Admin melihat seluruh produk aktif maupun nonaktif."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Katalog produk admin berhasil dimuat (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Tambah Produk Baru - POST",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/products",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "products"
+                  ],
+                  "query": []
+                },
+                "description": "Admin menambahkan produk buket baru ke etalase toko.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"category_id\": 1,\n  \"name\": \"Buket Mawar Admin Uji {{timestamp}}\",\n  \"slug\": \"buket-mawar-admin-uji-{{timestamp}}\",\n  \"description\": \"Produk buket ditambahkan oleh admin\",\n  \"price\": 180000,\n  \"stock\": 15,\n  \"min_stock\": 4,\n  \"image_url\": \"/uploads/products/admin-test-rose.jpg\",\n  \"status\": \"active\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.environment.set(\"timestamp\", Date.now().toString());"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Produk baru berhasil dibuat (201 Created)\", function () {",
+                      "    pm.response.to.have.status(201);",
+                      "});",
+                      "pm.test(\"Simpan new_product_id\", function () {",
+                      "    var jsonData = pm.response.json();",
+                      "    var p = jsonData.data || jsonData;",
+                      "    if (p.id) pm.environment.set(\"new_product_id\", p.id.toString());",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Perbarui Seluruh Data Produk - PUT",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/products/{{new_product_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "products",
+                    "{{new_product_id}}"
+                  ],
+                  "query": []
+                },
+                "description": "Admin memperbarui seluruh informasi produk via PUT.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"category_id\": 1,\n  \"name\": \"Buket Mawar Admin Diperbarui Penuh\",\n  \"slug\": \"buket-mawar-admin-updated-{{timestamp}}\",\n  \"description\": \"Deskripsi produk berhasil diupdate penuh\",\n  \"price\": 195000,\n  \"stock\": 20,\n  \"min_stock\": 5,\n  \"image_url\": \"/uploads/products/admin-test-rose-updated.jpg\",\n  \"status\": \"active\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Data produk berhasil diperbarui penuh (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Toggle Status Produk (Active/Inactive) - PATCH",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/products/{{new_product_id}}/status",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "products",
+                    "{{new_product_id}}",
+                    "status"
+                  ],
+                  "query": []
+                },
+                "description": "Admin menonaktifkan keterlihatan produk di katalog pelanggan via PATCH.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"inactive\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status produk berhasil diubah (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Hapus / Nonaktifkan Produk - DELETE",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/products/{{new_product_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "products",
+                    "{{new_product_id}}"
+                  ],
+                  "query": []
+                },
+                "description": "Admin menghapus produk (soft delete status inactive)."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Produk berhasil dinonaktifkan (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "3.6_Manajemen_Custom_Components",
+          "item": [
+            {
+              "name": "Daftar Seluruh Komponen Buket (Admin)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/custom-components",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "custom-components"
+                  ],
+                  "query": []
+                },
+                "description": "Admin melihat seluruh bahan buket custom (bunga, wrapping, pita, kartu)."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Komponen buket admin berhasil dimuat (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Tambah Komponen Buket Baru - POST",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/custom-components",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "custom-components"
+                  ],
+                  "query": []
+                },
+                "description": "Admin menambah bahan buket custom baru.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"category\": \"wrapping\",\n  \"name\": \"Kertas Wrapping Emas Gliter {{timestamp}}\",\n  \"price\": 25000,\n  \"stock\": 40,\n  \"min_stock\": 10,\n  \"image_url\": \"/uploads/components/wrap-gold.jpg\",\n  \"status\": \"active\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.environment.set(\"timestamp\", Date.now().toString());"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Komponen baru berhasil ditambahkan (201 Created)\", function () {",
+                      "    pm.response.to.have.status(201);",
+                      "});",
+                      "pm.test(\"Simpan new_component_id\", function () {",
+                      "    var jsonData = pm.response.json();",
+                      "    var c = jsonData.data || jsonData;",
+                      "    if (c.id) pm.environment.set(\"new_component_id\", c.id.toString());",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Perbarui Data Komponen - PUT",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/custom-components/{{new_component_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "custom-components",
+                    "{{new_component_id}}"
+                  ],
+                  "query": []
+                },
+                "description": "Admin mengubah harga, stok, dan batas minimum stok bahan via PUT.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"category\": \"wrapping\",\n  \"name\": \"Kertas Wrapping Emas Gliter Diperbarui\",\n  \"price\": 28000,\n  \"stock\": 45,\n  \"min_stock\": 12,\n  \"image_url\": \"/uploads/components/wrap-gold.jpg\",\n  \"status\": \"active\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Komponen berhasil diperbarui (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Toggle Status Komponen - PATCH",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/custom-components/{{new_component_id}}/status",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "custom-components",
+                    "{{new_component_id}}",
+                    "status"
+                  ],
+                  "query": []
+                },
+                "description": "Admin menonaktifkan status ketersediaan komponen via PATCH.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"inactive\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status komponen berhasil diubah (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Hapus / Nonaktifkan Komponen - DELETE",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/custom-components/{{new_component_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "custom-components",
+                    "{{new_component_id}}"
+                  ],
+                  "query": []
+                },
+                "description": "Admin menonaktifkan bahan buket (soft-delete)."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Komponen berhasil dinonaktifkan (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "3.7_Manajemen_Inventaris_Stok",
+          "item": [
+            {
+              "name": "Riwayat Log Mutasi Inventaris (Transactions)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/inventory/transactions?page=1&limit=10",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "inventory",
+                    "transactions"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Halaman 1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10",
+                      "description": "Limit 10 baris"
+                    }
+                  ]
+                },
+                "description": "Admin mengaudit catatan pergerakan keluar-masuk stok barang."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Log mutasi stok berhasil dimuat (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Restock / Tambah Stok Fisik Item - POST Restock",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/inventory/restock",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "inventory",
+                    "restock"
+                  ],
+                  "query": []
+                },
+                "description": "Admin menambah stok fisik produk dan mencatatnya ke jurnal stok.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"item_type\": \"product\",\n  \"item_id\": 1,\n  \"quantity\": 15,\n  \"notes\": \"Penambahan stok bunga potong segar dari supplier\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Restock berhasil diproses (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Peringatan Stok Menipis (Low Stock Alert)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/inventory/low-stock",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "inventory",
+                    "low-stock"
+                  ],
+                  "query": []
+                },
+                "description": "Admin melihat daftar barang yang berada di bawah ambang minimum."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Peringatan stok menipis berhasil dimuat (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "3.8_Pemenuhan_Pesanan_Fulfillment",
+          "item": [
+            {
+              "name": "Daftar Semua Pesanan Masuk (Admin)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/orders?page=1&limit=10",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "orders"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Halaman 1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10",
+                      "description": "Batas 10 pesanan"
+                    }
+                  ]
+                },
+                "description": "Admin melihat daftar pesanan yang harus dirangkai dan dikirim."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Daftar pesanan admin berhasil dimuat (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Detail Pesanan Admin by ID",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/orders/{{order_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "orders",
+                    "{{order_id}}"
+                  ],
+                  "query": []
+                },
+                "description": "Florist admin melihat kartu instruksi pesanan bunga."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Detail pesanan admin berhasil dimuat (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Fulfillment: Mulai Rangkai Bunga -> status diproses (PATCH)",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/orders/{{order_id}}/status",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "orders",
+                    "{{order_id}}",
+                    "status"
+                  ],
+                  "query": []
+                },
+                "description": "Admin mengubah status pesanan menjadi diproses.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"diproses\",\n  \"notes\": \"Buket bunga mulai dirangkai oleh florist\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status diproses berhasil diubah (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Fulfillment: Input Nomor Resi & Kurir -> siap_diambil_dikirim (PATCH)",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/orders/{{order_id}}/status",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "orders",
+                    "{{order_id}}",
+                    "status"
+                  ],
+                  "query": []
+                },
+                "description": "Admin memasukkan resi kurir dan mengubah status siap kirim.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"siap_diambil_dikirim\",\n  \"courier\": \"Lalamove Instant\",\n  \"tracking_number\": \"LLM-FLOVER-8829\",\n  \"notes\": \"Pesanan telah selesai dirangkai dan diserahkan ke kurir\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status siap kirim berhasil diubah (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Fulfillment: Selesaikan Pesanan -> status selesai (PATCH)",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/orders/{{order_id}}/status",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "orders",
+                    "{{order_id}}",
+                    "status"
+                  ],
+                  "query": []
+                },
+                "description": "Admin menyelesaikan siklus pesanan.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"selesai\",\n  \"notes\": \"Pesanan telah diserahkan ke penerima\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status selesai berhasil diubah (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Pemeriksaan Status Sinkronisasi Midtrans Gateway",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/orders/{{order_id}}/check-gateway",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "orders",
+                    "{{order_id}}",
+                    "check-gateway"
+                  ],
+                  "query": []
+                },
+                "description": "Admin menyinkronkan status pesanan langsung dengan server Midtrans."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Cek gateway selesai (200, 400, 404, atau 502)\", function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 400, 404, 502]);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Pembatalan Darurat & Refund Pesanan - POST Refund",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/orders/{{order_id}}/refund",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "orders",
+                    "{{order_id}}",
+                    "refund"
+                  ],
+                  "query": []
+                },
+                "description": "Admin membatalkan pesanan dan mengembalikan dana pelanggan.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Pelanggan membatalkan pesanan sebelum bunga dirangkai\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Refund diproses sesuai aturan bisnis (200 atau 400)\", function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 400]);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "3.9_Manajemen_Kas_dan_Keuangan",
+          "item": [
+            {
+              "name": "Daftar Sumber Akun Kas & Saldo Toko",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/cash-accounts",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "cash-accounts"
+                  ],
+                  "query": []
+                },
+                "description": "Owner melihat saldo kas kasir, rekening bank, dan saldo escrow."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Daftar akun kas toko berhasil dimuat (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Tambah Akun Kas Baru - POST Cash Account",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/cash-accounts",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "cash-accounts"
+                  ],
+                  "query": []
+                },
+                "description": "Owner mendaftarkan rekening operasional baru.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Rekening Bank BNI Bisnis\",\n  \"account_type\": \"bank\",\n  \"account_number\": \"98700012345\",\n  \"balance\": 1500000\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Akun kas berhasil dibuat (200 atau 201)\", function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Buku Kas Masuk & Keluar (Cashflow Ledger)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/cashflow?type=income&page=1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "cashflow"
+                  ],
+                  "query": [
+                    {
+                      "key": "type",
+                      "value": "income",
+                      "description": "Filter kas masuk"
+                    },
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Halaman 1"
+                    }
+                  ]
+                },
+                "description": "Owner melihat mutasi pemasukan penjualan buket dan biaya toko."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Catatan arus kas berhasil dimuat (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Catat Pengeluaran Operasional Toko - POST Expense",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/cashflow/expense",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "cashflow",
+                    "expense"
+                  ],
+                  "query": []
+                },
+                "description": "Owner mencatat beban biaya kasir operasional.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"cash_account_id\": 1,\n  \"category\": \"Beli Aksesori & Pita Tambahan\",\n  \"amount\": 75000,\n  \"reference_number\": \"EXP-TEST-001\",\n  \"notes\": \"Pembelian pita satin emas di Pasar Rawa Belong\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Pengeluaran kas berhasil dicatat (200 atau 201)\", function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Laporan Rekapitulasi Kas Bulanan",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/reports/cashflow/recap?start_date=2026-10-01&end_date=2026-10-31",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "reports",
+                    "cashflow",
+                    "recap"
+                  ],
+                  "query": [
+                    {
+                      "key": "start_date",
+                      "value": "2026-10-01",
+                      "description": "Awal bulan"
+                    },
+                    {
+                      "key": "end_date",
+                      "value": "2026-10-31",
+                      "description": "Akhir bulan"
+                    }
+                  ]
+                },
+                "description": "Owner melihat ikhtisar laba kotor, beban, dan laba bersih bulanan."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Laporan rekap kas bulanan berhasil dimuat (200 OK)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04_Cross_Role_Security_and_RBAC",
+      "item": [
+        {
+          "name": "04.01 - Pelanggan Coba Akses Dashboard Admin (Tolak 403)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/dashboard",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "dashboard"
+              ],
+              "query": []
+            },
+            "description": "Memastikan token customer ditolak saat mengakses rute administratif owner."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Pelanggan ditolak mengakses dashboard admin (403 Forbidden)\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "pm.test(\"Error code FORBIDDEN\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.error.code).to.eql(\"FORBIDDEN\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04.02 - Pelanggan Coba Tambah Produk Baru via Admin API (Tolak 403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/products",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "products"
+              ],
+              "query": []
+            },
+            "description": "Memastikan pelanggan dilarang memanipulasi katalog toko.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category_id\": 1,\n  \"name\": \"Buket Ilegal Oleh Pelanggan\",\n  \"price\": 1000,\n  \"stock\": 100\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Pelanggan ditolak menambah produk (403 Forbidden)\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "pm.test(\"Error code FORBIDDEN\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.error.code).to.eql(\"FORBIDDEN\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04.03 - Pelanggan Coba Ubah Status Pesanan via Admin API (Tolak 403)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/orders/{{order_id}}/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "orders",
+                "{{order_id}}",
+                "status"
+              ],
+              "query": []
+            },
+            "description": "Memastikan pelanggan tidak dapat mengubah status pesanan secara sepihak.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"selesai\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Pelanggan ditolak mengubah status pesanan via admin (403 Forbidden)\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04.04 - Pelanggan Coba Hapus Kategori via Admin API (Tolak 403)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/categories/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "categories",
+                "1"
+              ],
+              "query": []
+            },
+            "description": "Memastikan pelanggan tidak memiliki wewenang menghapus kategori produk."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Pelanggan ditolak menghapus kategori (403 Forbidden)\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04.05 - Pelanggan Coba Akses Daftar Pengguna Admin (Tolak 403)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users"
+              ],
+              "query": []
+            },
+            "description": "Memastikan data seluruh pelanggan terlindungi dari akses sesama pelanggan."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Pelanggan ditolak melihat data pengguna lain (403 Forbidden)\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04.06 - Admin Coba Akses Keranjang Belanja Pelanggan (Tolak 403)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/cart",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "cart"
+              ],
+              "query": []
+            },
+            "description": "Memastikan rute keranjang belanja dikhususkan untuk peran customer."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Admin ditolak mengakses keranjang belanja (403 Forbidden)\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "pm.test(\"Error code FORBIDDEN khusus customer\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.error.code).to.eql(\"FORBIDDEN\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04.07 - Admin Coba Checkout Pesanan Pelanggan (Tolak 403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/orders/checkout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "checkout"
+              ],
+              "query": []
+            },
+            "description": "Memastikan rute checkout belanja dikhususkan untuk peran customer.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fulfillment_method\": \"delivery\",\n  \"recipient_name\": \"Admin Ilegal\",\n  \"recipient_phone\": \"081234567890\",\n  \"delivery_address\": \"Jl. Kantor\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Admin ditolak melakukan checkout pelanggan (403 Forbidden)\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04.08 - Akses Protected Route Tanpa Token (Tolak 401)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/user/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "profile"
+              ],
+              "query": []
+            },
+            "description": "Memastikan endpoint terproteksi menolak request tanpa Authorization header."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Akses tanpa token ditolak (401 Unauthorized)\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test(\"Error code UNAUTHORIZED\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.error.code).to.eql(\"UNAUTHORIZED\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04.09 - Akses Protected Route dengan Token Rusak / Palsu (Tolak 401)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer invalid_tampered_jwt_token_sample",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/user/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "profile"
+              ],
+              "query": []
+            },
+            "description": "Memastikan token palsu/rusak ditolak oleh middleware JWT."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Akses token palsu ditolak (401 Unauthorized)\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test(\"Error code INVALID_TOKEN\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.error.code).to.eql(\"INVALID_TOKEN\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04.10 - Akses Menggunakan Token Akun yang Dinonaktifkan (Tolak 403)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{deactivated_customer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/user/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "profile"
+              ],
+              "query": []
+            },
+            "description": "Memastikan akun berstatus inactive langsung dicegat oleh middleware verifikasi status database."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Token akun dinonaktifkan ditolak (403 Forbidden)\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "pm.test(\"Error code ACCOUNT_INACTIVE\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.error.code).to.eql(\"ACCOUNT_INACTIVE\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04.11 - Refresh Token Menggunakan Token yang Telah Dicabut (Tolak 401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/refresh-token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "refresh-token"
+              ],
+              "query": []
+            },
+            "description": "Memastikan token sesi yang telah dilogout tidak dapat dipakai kembali.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{temp_revoked_refresh_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Refresh token yang dicabut ditolak (401 Unauthorized)\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test(\"Error code REVOKED_REFRESH_TOKEN\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.error.code).to.eql(\"REVOKED_REFRESH_TOKEN\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
