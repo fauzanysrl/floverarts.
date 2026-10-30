@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# FloverArts Cleanup & Design Archives
+_originals/
+_to_delete/
+

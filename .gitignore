@@ -32,3 +32,10 @@ backend/uploads/*
 .idea/
 .DS_Store
 Thumbs.db
+
+# Design originals and temporary deletions
+_originals/
+_to_delete/
+*/_originals/
+*/_to_delete/
+
