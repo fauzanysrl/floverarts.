@@ -34,7 +34,7 @@ function TestimonialCard({ item, center = false }) {
           className={`w-9 h-9 rounded-full flex items-center justify-center font-serif font-bold text-xs border-2 shrink-0 ${
             center
               ? 'bg-white/20 text-white border-white/40'
-              : 'bg-[#EDE3F2] text-[#3B122D] border-[#EAE3E9]'
+              : 'bg-softLavender text-primary border-softLavender'
           }`}
           aria-hidden="true"
         >
@@ -154,3 +154,4 @@ export function TestimonialsSection() {
 }
 
 export default TestimonialsSection;
+
