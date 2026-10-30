@@ -2,6 +2,7 @@ import React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import catalogApi from '../../../api/endpoints/catalog';
+import { useProducts } from '../../catalog/hooks/useProducts';
 import { DEFAULT_FEATURED_PRODUCTS } from '../constants/homeData';
 
 import HeroSection from '../components/HeroSection';
@@ -29,25 +30,34 @@ export function HomePage() {
     },
   });
 
+  // Parameter pencarian & filter sesuai kontrak backend API: category_id & q
+  const productQueryParams = {};
+  if (activeCategory) productQueryParams.category_id = activeCategory;
+  if (searchQuery)    productQueryParams.q           = searchQuery;
+
   const {
     data: productsData,
     isLoading: isProductsLoading,
     isError: isProductsError,
     error: productsError,
     refetch: refetchProducts,
-  } = useQuery({
-    queryKey: ['products', activeCategory, searchQuery],
-    queryFn: async () => {
-      const params = {};
-      if (activeCategory) params.category_id = activeCategory;
-      if (searchQuery)    params.search       = searchQuery;
-      const res = await catalogApi.getProducts(params);
-      return res.data || [];
-    },
-  });
+  } = useProducts(productQueryParams);
 
   const categories = categoriesData || [];
-  const products   = (productsData && productsData.length > 0) ? productsData : DEFAULT_FEATURED_PRODUCTS;
+
+  // Logika Penanganan Produk:
+  // 1. Jika filter atau pencarian aktif: SELALU gunakan data hasil API (jika kosong, tampilkan empty state)
+  // 2. Jika tanpa filter dan data API tersedia: tampilkan data API
+  // 3. Jika tanpa filter dan data awal belum tersedia (offline / DB belum seeded) serta tidak error: gunakan fallback default
+  const hasActiveFilter = Boolean(activeCategory || searchQuery);
+  let products = [];
+  if (hasActiveFilter) {
+    products = productsData || [];
+  } else if (productsData && productsData.length > 0) {
+    products = productsData;
+  } else if (!isProductsLoading && !isProductsError) {
+    products = DEFAULT_FEATURED_PRODUCTS;
+  }
 
   const handleSelectCategory = (categoryId) => {
     const newParams = new URLSearchParams(searchParams);
@@ -88,3 +98,4 @@ export function HomePage() {
 }
 
 export default HomePage;
+

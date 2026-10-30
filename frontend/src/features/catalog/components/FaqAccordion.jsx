@@ -1,40 +1,8 @@
 import React, { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { FAQS } from '../../home/constants/homeData';
 
-const FAQS = [
-  {
-    id: 1,
-    question: 'Bagaimana cara memesan buket bunga?',
-    answer:
-      'Pilih buket favorit Anda dari katalog atau gunakan fitur Custom Bouquet, klik "Detail / Pesan", tambahkan ke keranjang, dan lakukan checkout dengan mengisi alamat penerima serta tanggal pengiriman.',
-  },
-  {
-    id: 2,
-    question: 'Bisakah saya merakit buket custom sendiri?',
-    answer:
-      'Ya! Floverarts menyediakan fitur Custom Bouquet di mana Anda dapat memilih sendiri jenis bunga segar, warna kertas pembungkus (wrapping), pita, serta menuliskan pesan personal pada kartu ucapan.',
-  },
-  {
-    id: 3,
-    question: 'Metode pembayaran apa saja yang didukung?',
-    answer:
-      'Seluruh pembayaran diproses otomatis dan aman melalui Midtrans Snap. Kami menerima QRIS (GoPay, OVO, ShopeePay, DANA), Virtual Account Bank (BCA, Mandiri, BNI, BRI), dan Kartu Kredit.',
-  },
-  {
-    id: 4,
-    question: 'Bagaimana cara melacak status pesanan saya?',
-    answer:
-      'Setelah pembayaran terkonfirmasi, Anda dapat memantau status pesanan (dikonfirmasi → diproses → siap dikirim → selesai) dan nomor resi kurir secara real-time melalui menu "Pesanan Saya".',
-  },
-  {
-    id: 5,
-    question: 'Bisakah saya menentukan tanggal dan waktu pengiriman?',
-    answer:
-      'Tentu saja. Pada saat checkout, Anda dapat memilih tanggal pengiriman yang diinginkan, baik untuk pengiriman di hari yang sama (Same-Day) maupun pemesanan terjadwal untuk hari ulang tahun atau wisuda mendatang.',
-  },
-];
-
-export function FaqAccordion() {
+export function FaqAccordion({ faqs = FAQS }) {
   const [openId, setOpenId] = useState(1);
 
   const toggle = (id) => {
@@ -43,7 +11,7 @@ export function FaqAccordion() {
 
   return (
     <div className="w-full max-w-3xl mx-auto flex flex-col gap-3">
-      {FAQS.map((faq) => {
+      {faqs.map((faq) => {
         const isOpen = openId === faq.id;
         return (
           <div

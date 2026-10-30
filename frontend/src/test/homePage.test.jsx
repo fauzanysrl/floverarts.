@@ -1,9 +1,10 @@
 import React from 'react';
-import { describe, it, expect, vi, beforeAll } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import HomePage from '../features/home/pages/HomePage';
+import catalogApi from '../api/endpoints/catalog';
 
 beforeAll(() => {
   class MockIntersectionObserver {
@@ -22,7 +23,11 @@ beforeAll(() => {
   };
 });
 
-function renderHomePage() {
+beforeEach(() => {
+  vi.restoreAllMocks();
+});
+
+function renderHomePage(initialEntries = ['/']) {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
@@ -33,7 +38,7 @@ function renderHomePage() {
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={initialEntries}>
         <HomePage />
       </MemoryRouter>
     </QueryClientProvider>
@@ -76,5 +81,64 @@ describe('HomePage Component', () => {
 
     // 11. Final CTA heading tampil
     expect(screen.getByText(/Find The Perfect/i)).toBeInTheDocument();
+  });
+
+  it('harus mengirim parameter "q" ke API backend dan menampilkan produk hasil pencarian', async () => {
+    const mockProducts = [
+      {
+        id: 99,
+        name: 'Buket Mawar Hitam Spesial',
+        slug: 'buket-mawar-hitam-spesial',
+        category_name: 'Buket Bunga Segar',
+        price: 350000,
+        stock: 5,
+        image_url: '/hero-giant-bouquet.png',
+      },
+    ];
+
+    const getProductsSpy = vi.spyOn(catalogApi, 'getProducts').mockResolvedValue({
+      success: true,
+      data: mockProducts,
+    });
+
+    renderHomePage(['/?q=Mawar']);
+
+    // Verifikasi parameter pencarian yang dikirim adalah q: 'Mawar'
+    await waitFor(() => {
+      expect(getProductsSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ q: 'Mawar' })
+      );
+    });
+
+    // Produk hasil pencarian harus tampil
+    expect(await screen.findByText('Buket Mawar Hitam Spesial')).toBeInTheDocument();
+  });
+
+  it('harus menampilkan EmptyState dan TIDAK menampilkan produk default saat pencarian kosong', async () => {
+    vi.spyOn(catalogApi, 'getProducts').mockResolvedValue({
+      success: true,
+      data: [],
+    });
+
+    renderHomePage(['/?q=BungaTidakAda123']);
+
+    // Harus menampilkan empty state "Produk Tidak Ditemukan"
+    expect(await screen.findByTestId('catalog-empty-state')).toBeInTheDocument();
+    expect(screen.getByText('Produk Tidak Ditemukan')).toBeInTheDocument();
+
+    // Produk default (Classic Sunset Bouquet) TIDAK boleh muncul
+    expect(screen.queryByText('Classic Sunset Bouquet')).not.toBeInTheDocument();
+  });
+
+  it('harus menampilkan fallback produk default saat tanpa filter dan database belum memiliki produk', async () => {
+    vi.spyOn(catalogApi, 'getProducts').mockResolvedValue({
+      success: true,
+      data: [],
+    });
+
+    renderHomePage(['/']);
+
+    // Karena tanpa filter dan data belum seeded, fallback produk default ditampilkan
+    expect(await screen.findByText('Classic Sunset Bouquet')).toBeInTheDocument();
   });
 });

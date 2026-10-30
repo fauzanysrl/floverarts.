@@ -1,8 +1,7 @@
 import React from 'react';
 import { RotateCcw } from 'lucide-react';
 import RevealSection from './RevealSection';
-import ProductCard from '../../catalog/components/ProductCard';
-import ErrorState from '../../../components/feedback/ErrorState';
+import ProductGrid from '../../catalog/components/ProductGrid';
 
 export function BestSellingSection({
   activeCategory,
@@ -65,36 +64,20 @@ export function BestSellingSection({
             ))}
         </div>
 
-        {/* Product Grid */}
-        {isProductsError ? (
-          <div className="bg-white rounded-2xl shadow-sm p-8 my-6">
-            <ErrorState
-              title="Gagal Memuat Produk"
-              message={productsError?.message || 'Tidak dapat terhubung ke server backend.'}
-              onRetry={refetchProducts}
-            />
-          </div>
-        ) : isProductsLoading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-            {[1, 2, 3, 4].map((n) => (
-              <div key={n} className="bg-white rounded-2xl shadow-xs p-4 flex flex-col gap-3 animate-pulse">
-                <div className="w-full aspect-[4/5] bg-bgSecondary rounded-xl" />
-                <div className="h-4 bg-bgSecondary rounded w-3/4" />
-                <div className="h-3 bg-bgSecondary rounded w-1/2" />
-                <div className="h-5 bg-bgSecondary rounded w-1/3 mt-2" />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        )}
+        {/* Product Grid Terpusat */}
+        <ProductGrid
+          products={products}
+          isLoading={isProductsLoading}
+          isError={isProductsError}
+          error={productsError}
+          onRetry={refetchProducts}
+          skeletonCount={4}
+          className="lg:grid-cols-4"
+        />
       </RevealSection>
     </section>
   );
 }
 
 export default BestSellingSection;
+

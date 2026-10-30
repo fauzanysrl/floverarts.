@@ -98,3 +98,38 @@ export const ORDER_STEPS = [
   { num: '3', title: 'Complete Your Order',    desc: 'Provide delivery details and pay safely with Midtrans Snap.' },
   { num: '4', title: 'Track Your Order',       desc: 'Monitor real-time preparation and delivery updates directly on the web.' },
 ];
+
+export const FAQS = [
+  {
+    id: 1,
+    question: 'Bagaimana cara memesan buket bunga?',
+    answer:
+      'Pilih buket favorit Anda dari katalog atau gunakan fitur Custom Bouquet, klik "Detail / Pesan", tambahkan ke keranjang, dan lakukan checkout dengan mengisi alamat penerima serta tanggal pengiriman.',
+  },
+  {
+    id: 2,
+    question: 'Bisakah saya merakit buket custom sendiri?',
+    answer:
+      'Ya! Floverarts menyediakan fitur Custom Bouquet di mana Anda dapat memilih sendiri jenis bunga segar, warna kertas pembungkus (wrapping), pita, serta menuliskan pesan personal pada kartu ucapan.',
+  },
+  {
+    id: 3,
+    question: 'Metode pembayaran apa saja yang didukung?',
+    answer:
+      'Seluruh pembayaran diproses otomatis dan aman melalui Midtrans Snap. Kami menerima QRIS (GoPay, OVO, ShopeePay, DANA), Virtual Account Bank (BCA, Mandiri, BNI, BRI), dan Kartu Kredit.',
+  },
+  {
+    id: 4,
+    question: 'Bagaimana cara melacak status pesanan saya?',
+    answer:
+      'Setelah pembayaran terkonfirmasi, Anda dapat memantau status pesanan (dikonfirmasi → diproses → siap dikirim → selesai) dan nomor resi kurir secara real-time melalui menu "Pesanan Saya".',
+  },
+  {
+    id: 5,
+    question: 'Bisakah saya menentukan tanggal dan waktu pengiriman?',
+    answer:
+      'Tentu saja. Pada saat checkout, Anda dapat memilih tanggal pengiriman yang diinginkan, baik untuk pengiriman di hari yang sama (Same-Day) maupun pemesanan terjadwal untuk hari ulang tahun atau wisuda mendatang.',
+  },
+];
+
+
