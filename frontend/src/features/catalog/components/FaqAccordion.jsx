@@ -21,7 +21,7 @@ export function FaqAccordion({ faqs = FAQS }) {
             <button
               type="button"
               onClick={() => toggle(faq.id)}
-              className="w-full flex items-center justify-between p-5 text-left text-sm sm:text-base font-serif font-bold text-primaryText hover:text-primary transition-colors gap-4"
+              className="w-full flex items-center justify-between p-5 text-left text-sm sm:text-base font-heading font-semibold text-primaryText hover:text-primary transition-colors gap-4"
               aria-expanded={isOpen}
             >
               <span>{faq.question}</span>

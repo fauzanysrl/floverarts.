@@ -1,0 +1,273 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   FLOVERARTS REVISED DESIGN SYSTEM TOKENS (PRD v2.0)
+   Minimalist, Modern Editorial, Soft Lavender & Dark Plum
+   Typography: Poppins (Headings), Plus Jakarta Sans (Body), Roboto (Data/Input)
+   ========================================================================== */
+:root {
+  /* Typography Variables */
+  --font-heading: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-roboto: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+
+  /* Legacy aliases for backward compatibility */
+  --font-serif: var(--font-heading);
+
+  /* Color Palette */
+  --color-primary: #3B122D;         /* Dark plum untuk footer, tombol utama & aksen */
+  --color-primary-hover: #4D183B;
+  --color-primary-active: #2B0C20;
+  
+  --color-bg-page: #FFFFFF;         /* Latar belakang utama (putih bersih) */
+  --color-bg-secondary: #FAF7F8;    /* Latar belakang section alternatif */
+  --color-surface: #FAF7F8;         /* Surface section */
+  --color-soft-lavender: #EDE3F2;   /* Aksen lavender lembut */
+  --color-card-bg: #FFFFFF;         /* Kartu produk & komponen */
+  
+  --color-text-primary: #241B22;    /* Teks judul & teks utama (kontras tinggi, editorial) */
+  --color-text-secondary: #756A73;  /* Deskripsi & teks sekunder */
+  --color-text-muted: #8E838C;
+  
+  --color-border: #E8E0E5;          /* Border subtil natural */
+  --color-accent: #D9B7CC;          /* Aksen dekoratif lembut */
+
+  /* Semantic */
+  --color-error: #d93848;
+  --color-error-bg: #fdf2f3;
+  --color-success: #1f8a53;
+  --color-success-bg: #edf8f2;
+
+  /* Border Radii (Natural & Hierarchical) */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-3xl: 24px;
+
+  /* Shadows (Subtle, Clean & Soft) */
+  --shadow-xs: 0 1px 2px rgba(36, 27, 34, 0.04);
+  --shadow-sm: 0 2px 6px rgba(36, 27, 34, 0.05);
+  --shadow-md: 0 4px 16px -2px rgba(59, 18, 45, 0.06);
+  --shadow-card: 0 8px 24px -4px rgba(59, 18, 45, 0.07);
+  --shadow-button: 0 4px 14px -2px rgba(59, 18, 45, 0.22);
+
+  /* Transitions */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  min-height: 100%;
+  width: 100%;
+  font-family: var(--font-sans);
+  background-color: var(--color-bg-page);
+  color: var(--color-text-primary);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+}
+
+input, textarea, select {
+  font-family: var(--font-roboto);
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(59, 18, 45, 0.18);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 18, 45, 0.32);
+}
+
+/* ======================================================
+   GALLERY — Infinite Marquee Scroll (julyo11 style)
+   Two rows: top scrolls LEFT, bottom scrolls RIGHT
+   ====================================================== */
+@keyframes marquee-left {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+@keyframes marquee-right {
+  0%   { transform: translateX(-50%); }
+  100% { transform: translateX(0); }
+}
+
+.marquee-left {
+  display: flex;
+  width: max-content;
+  animation: marquee-left 28s linear infinite;
+}
+.marquee-right {
+  display: flex;
+  width: max-content;
+  animation: marquee-right 32s linear infinite;
+}
+
+/* Pause on hover */
+.marquee-track:hover .marquee-left,
+.marquee-track:hover .marquee-right {
+  animation-play-state: paused;
+}
+
+/* No scrollbar utility */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ======================================================
+   TESTIMONIAL CAROUSEL — Slide Transitions
+   ====================================================== */
+.testimonial-track {
+  display: flex;
+  transition: transform 0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  will-change: transform;
+}
+
+/* ======================================================
+   GLOBAL ANIMATIONS & MICROINTERACTIONS
+   ====================================================== */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes cartBounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.18); }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out both;
+}
+
+.animate-scale-up {
+  animation: scaleUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-cart-bounce {
+  animation: cartBounce 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.delay-75  { animation-delay: 75ms; }
+.delay-100 { animation-delay: 100ms; }
+.delay-150 { animation-delay: 150ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-250 { animation-delay: 250ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-400 { animation-delay: 400ms; }
+.delay-500 { animation-delay: 500ms; }
+
+/* Accordion Smooth Height Transition via Grid */
+.accordion-wrapper {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 260ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.accordion-wrapper.open {
+  grid-template-rows: 1fr;
+}
+.accordion-content-inner {
+  overflow: hidden;
+}
+
+/* ======================================================
+   SKELETON SHIMMER — Subtle, accessible linear shimmer
+   Replaces harsh animate-pulse with a soft gradient wave
+   ====================================================== */
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+  background-color: #f5edf4;
+}
+
+.skeleton-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.55) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: shimmer 1.8s infinite ease-in-out;
+}
+
+/* Accessibility: Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .skeleton-shimmer::after {
+    animation: none !important;
+    display: none !important;
+  }
+  .marquee-left,
+  .marquee-right {
+    animation: none !important;
+  }
+}
+

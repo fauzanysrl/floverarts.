@@ -56,7 +56,8 @@ describe('HomePage Component', () => {
     expect(screen.getByText(/You'll Love/i)).toBeInTheDocument();
 
     // 3. Best-Selling Bouquets section tampil
-    expect(screen.getByText('Best-Selling Bouquets')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Best[- ]Selling Bouquets/i })).toBeInTheDocument();
+    expect(screen.getByText(/Rangkaian bunga dan hadiah penuh makna/i)).toBeInTheDocument();
 
     // 4. Bouquet Gallery heading tampil
     expect(screen.getByText('Bouquet Gallery')).toBeInTheDocument();

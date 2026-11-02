@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import catalogApi from '../../../api/endpoints/catalog';
 import { useProducts } from '../../catalog/hooks/useProducts';
-import { DEFAULT_FEATURED_PRODUCTS } from '../constants/homeData';
+import { DEFAULT_FEATURED_PRODUCTS, STORE_CATEGORIES } from '../constants/homeData';
 
 import HeroSection from '../components/HeroSection';
 import FeaturedBouquetSection from '../components/FeaturedBouquetSection';
@@ -43,7 +43,7 @@ export function HomePage() {
     refetch: refetchProducts,
   } = useProducts(productQueryParams);
 
-  const categories = categoriesData || [];
+  const categories = categoriesData && categoriesData.length > 0 ? categoriesData : STORE_CATEGORIES;
 
   // Logika Penanganan Produk:
   // 1. Jika filter atau pencarian aktif: SELALU gunakan data hasil API (jika kosong, tampilkan empty state)

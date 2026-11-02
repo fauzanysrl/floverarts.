@@ -11,7 +11,7 @@ import {
 
 export function FeaturedBouquetSection() {
   return (
-    <section className="py-20 md:py-28 bg-white overflow-hidden">
+    <section className="pt-14 pb-4 md:pt-20 md:pb-6 bg-white overflow-hidden">
       <RevealSection className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center text-center">
 
         {/* Mini Thumbnails */}
@@ -31,9 +31,9 @@ export function FeaturedBouquetSection() {
         </div>
 
         {/* Heading */}
-        <h2 className="font-serif text-4xl sm:text-5xl lg:text-[62px] text-primaryText font-normal tracking-tight leading-[1.12] mb-12 sm:mb-16">
+        <h2 className="font-heading text-4m sm:text-4m lg:text-[60px] text-primaryText font-medium tracking-tight leading-[1.12] mb-12 sm:mb-16">
           Handcrafted Bouquets <br />
-          <span className="italic font-normal">You'll Love</span>
+          <span className="italic font-medium">You'll Love</span>
         </h2>
 
         {/* Main Image + Floating Cards */}
@@ -41,7 +41,7 @@ export function FeaturedBouquetSection() {
           <div className="relative aspect-[3/4] w-full rounded-[32px] sm:rounded-[40px] overflow-hidden bg-white shadow-card border-4 border-white">
             <ResponsiveImage
               src={FEATURED_MAIN_BOUQUET}
-              alt="Rangkaian buket satin eksklusif Pink Serenity Lily FloverArts_"
+              alt="Rangkaian buket bunga daisy segar pilihan FloverArts_"
               aspectRatio="aspect-[3/4]"
               fallbackLabel="Buket Pilihan FloverArts_"
             />
@@ -58,9 +58,9 @@ export function FeaturedBouquetSection() {
                 />
               </div>
               <div className="flex flex-col">
-                <span className="text-[10px] font-bold tracking-wider uppercase text-[#6D8B72] mb-0.5">BEST SELLER</span>
-                <h4 className="font-serif font-bold text-base sm:text-lg text-primaryText leading-snug">Pink Harmony</h4>
-                <span className="text-xs text-secondaryText font-medium mt-0.5">Rp 125.000</span>
+                <span className="text-[10px] font-roboto font-bold tracking-wider uppercase text-[#6D8B72] mb-0.5">BEST SELLER</span>
+                <h4 className="font-heading font-semibold text-base sm:text-lg text-primaryText leading-snug">Pink Harmony</h4>
+                <span className="text-xs font-roboto text-secondaryText font-medium mt-0.5">Rp 125.000</span>
               </div>
             </div>
           </div>
@@ -76,9 +76,9 @@ export function FeaturedBouquetSection() {
                 />
               </div>
               <div className="flex flex-col">
-                <span className="text-[10px] font-bold tracking-wider uppercase text-[#B88A50] mb-0.5">NEW</span>
-                <h4 className="font-serif font-bold text-base sm:text-lg text-primaryText leading-snug">White Bloom</h4>
-                <span className="text-xs text-secondaryText font-medium mt-0.5">Rp 115.000</span>
+                <span className="text-[10px] font-roboto font-bold tracking-wider uppercase text-[#B88A50] mb-0.5">NEW</span>
+                <h4 className="font-heading font-semibold text-base sm:text-lg text-primaryText leading-snug">White Bloom</h4>
+                <span className="text-xs font-roboto text-secondaryText font-medium mt-0.5">Rp 115.000</span>
               </div>
             </div>
           </div>
@@ -90,3 +90,4 @@ export function FeaturedBouquetSection() {
 }
 
 export default FeaturedBouquetSection;
+

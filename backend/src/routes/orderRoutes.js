@@ -3,8 +3,8 @@ const router = express.Router();
 const { authenticate, requireRole } = require('../middlewares/authMiddleware');
 const { checkout } = require('../controllers/orderController');
 
-// Proteksi: Semua rute pemesanan membutuhkan autentikasi pelanggan
-router.use(authenticate, requireRole('customer'));
+// Proteksi: Rute pemesanan membutuhkan autentikasi pengguna
+router.use(authenticate, requireRole('customer', 'owner_admin'));
 
 // POST /api/orders/checkout
 router.post('/checkout', checkout);

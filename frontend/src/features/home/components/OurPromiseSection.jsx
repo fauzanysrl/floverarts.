@@ -21,12 +21,12 @@ export function OurPromiseSection() {
       <RevealSection className="max-w-container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="mb-10 sm:mb-12 text-center">
-          <span className="text-[11px] uppercase tracking-[0.2em] text-secondaryText font-semibold mb-2 block">
+          <span className="text-[11px] font-roboto uppercase tracking-[0.2em] text-secondaryText font-semibold mb-2 block">
             QUALITY &amp; DEDICATION
           </span>
           <h2
             id="our-promise-heading"
-            className="font-serif text-3xl sm:text-4xl font-normal text-primaryText leading-tight"
+            className="font-heading text-3xl sm:text-4xl font-semibold text-primaryText leading-tight"
           >
             Our Promise
           </h2>
@@ -57,7 +57,7 @@ export function OurPromiseSection() {
                   <PromiseIcon>
                     <IconComponent size={20} />
                   </PromiseIcon>
-                  <h3 className="font-serif text-lg sm:text-[19px] font-medium text-primaryText mb-1.5 leading-snug">
+                  <h3 className="font-heading text-lg sm:text-[19px] font-semibold text-primaryText mb-1.5 leading-snug">
                     {promise.title}
                   </h3>
                   <p className="font-sans text-xs sm:text-sm text-secondaryText leading-relaxed line-clamp-3">
@@ -74,3 +74,4 @@ export function OurPromiseSection() {
 }
 
 export default OurPromiseSection;
+

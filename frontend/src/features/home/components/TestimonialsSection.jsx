@@ -1,38 +1,49 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import RevealSection from './RevealSection';
 import { TESTIMONIALS } from '../constants/homeData';
 
-function TestimonialCard({ item, center = false }) {
+function TestimonialCard({ item, isCenter, onClick }) {
   return (
     <div
-      className={`rounded-2xl p-6 flex flex-col gap-4 transition-all duration-500 ${
-        center
-          ? 'bg-[#1a0d15] text-white shadow-2xl scale-100'
-          : 'bg-[#F8F6F8] text-[#30242D] shadow-xs scale-95 opacity-60'
+      onClick={onClick}
+      className={`rounded-2xl p-6 sm:p-7 flex flex-col justify-between h-full transition-colors duration-500 text-left select-none ${
+        isCenter
+          ? 'bg-[#1a0d15] text-white shadow-2xl cursor-default'
+          : 'bg-[#F8F6F8] text-[#30242D] shadow-sm hover:bg-[#F2EDF2] cursor-pointer'
       }`}
     >
-      {/* Stars */}
-      <div className="flex gap-1">
-        {[1, 2, 3, 4, 5].map((s) => (
-          <Star
-            key={s}
-            size={13}
-            className={center ? 'fill-amber-300 text-amber-300' : 'fill-[#C4B4BD] text-[#C4B4BD]'}
-          />
-        ))}
+      <div>
+        {/* Rating Stars */}
+        <div className="flex gap-1 mb-3.5">
+          {[1, 2, 3, 4, 5].map((s) => (
+            <Star
+              key={s}
+              size={14}
+              className={
+                isCenter
+                  ? 'fill-amber-300 text-amber-300'
+                  : 'fill-[#C4B4BD] text-[#C4B4BD]'
+              }
+            />
+          ))}
+        </div>
+
+        {/* Quote */}
+        <p
+          className={`text-sm sm:text-base leading-relaxed italic font-light ${
+            isCenter ? 'text-white/95' : 'text-[#857985]'
+          }`}
+        >
+          {item.quote}
+        </p>
       </div>
 
-      {/* Quote */}
-      <p className={`text-sm leading-relaxed italic font-light ${center ? 'text-white/90' : 'text-[#857985]'}`}>
-        {item.quote}
-      </p>
-
-      {/* Author & Initial Avatar (Zero external image dependencies) */}
-      <div className="flex items-center gap-3 mt-auto">
+      {/* Author & Initial Avatar */}
+      <div className="flex items-center gap-3 mt-6 pt-4 border-t border-current/10">
         <div
-          className={`w-9 h-9 rounded-full flex items-center justify-center font-serif font-bold text-xs border-2 shrink-0 ${
-            center
+          className={`w-9 h-9 rounded-full flex items-center justify-center font-heading font-bold text-xs border-2 shrink-0 ${
+            isCenter
               ? 'bg-white/20 text-white border-white/40'
               : 'bg-softLavender text-primary border-softLavender'
           }`}
@@ -41,10 +52,20 @@ function TestimonialCard({ item, center = false }) {
           {item.initials || item.name.charAt(0)}
         </div>
         <div>
-          <p className={`text-xs font-semibold uppercase tracking-wide ${center ? 'text-white' : 'text-[#30242D]'}`}>
+          <p
+            className={`text-xs font-semibold uppercase tracking-wide ${
+              isCenter ? 'text-white' : 'text-[#30242D]'
+            }`}
+          >
             {item.name}
           </p>
-          <p className={`text-[10px] ${center ? 'text-white/60' : 'text-[#857985]'}`}>{item.role}</p>
+          <p
+            className={`text-[10px] ${
+              isCenter ? 'text-white/70' : 'text-[#857985]'
+            }`}
+          >
+            {item.role}
+          </p>
         </div>
       </div>
     </div>
@@ -52,7 +73,9 @@ function TestimonialCard({ item, center = false }) {
 }
 
 function TestimonialCarousel({ items }) {
-  const [active, setActive] = useState(1); // start at index 1 (center)
+  const [active, setActive] = useState(1); // default active index: 1 (Nur Hayati)
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
   const total = items.length;
 
   const prev = useCallback(() => {
@@ -63,70 +86,129 @@ function TestimonialCarousel({ items }) {
     setActive((a) => (a + 1) % total);
   }, [total]);
 
-  // Auto-advance every 5s
-  useEffect(() => {
-    const t = setInterval(next, 5000);
-    return () => clearInterval(t);
-  }, [next]);
+  // Touch Swipe Handlers untuk Layar Sentuh / Mobile
+  const handleTouchStart = (e) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
 
-  // Indices of left, center, right visible cards
-  const leftIdx   = (active - 1 + total) % total;
-  const centerIdx = active;
-  const rightIdx  = (active + 1) % total;
+  const handleTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const minSwipeDistance = 45;
+    if (distance > minSwipeDistance) {
+      next(); // Geser ke kiri -> lanjut ke testimoni berikutnya
+    } else if (distance < -minSwipeDistance) {
+      prev(); // Geser ke kanan -> kembali ke testimoni sebelumnya
+    }
+  };
 
   return (
-    <div className="relative w-full select-none">
-      {/* Three-card viewport */}
-      <div className="flex items-center justify-center gap-4 md:gap-6 overflow-visible px-4 md:px-0">
-        {/* LEFT card */}
-        <div
-          className="hidden sm:block w-full max-w-[300px] flex-shrink-0 cursor-pointer"
-          onClick={prev}
-        >
-          <TestimonialCard item={items[leftIdx]} />
-        </div>
+    <div
+      className="relative w-full max-w-4xl mx-auto select-none"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* 3D Smooth Sliding Carousel Stage */}
+      <div className="relative h-[230px] sm:h-[240px] w-full flex items-center justify-center overflow-hidden sm:overflow-visible">
+        {items.map((item, idx) => {
+          // Hitung relative circular offset terhadap kartu aktif (-1: kiri, 0: tengah, 1: kanan)
+          let offset = (idx - active) % total;
+          if (offset < -Math.floor(total / 2)) offset += total;
+          if (offset > Math.floor(total / 2)) offset -= total;
 
-        {/* CENTER card */}
-        <div className="w-full max-w-[380px] flex-shrink-0 z-10">
-          <TestimonialCard item={items[centerIdx]} center />
-        </div>
+          const isCenter = offset === 0;
+          const isLeft = offset === -1;
+          const isRight = offset === 1;
 
-        {/* RIGHT card */}
-        <div
-          className="hidden sm:block w-full max-w-[300px] flex-shrink-0 cursor-pointer"
-          onClick={next}
-        >
-          <TestimonialCard item={items[rightIdx]} />
-        </div>
+          // Hitung opacity & zIndex berdasarkan posisi
+          let opacityStyle = 0;
+          let zIndexStyle = 1;
+          let pointerEvents = 'none';
+
+          if (isCenter) {
+            opacityStyle = 1;
+            zIndexStyle = 20;
+            pointerEvents = 'auto';
+          } else if (isLeft || isRight) {
+            opacityStyle = 0.55;
+            zIndexStyle = 10;
+            pointerEvents = 'auto';
+          }
+
+          return (
+            <div
+              key={item.name}
+              style={{
+                opacity: opacityStyle,
+                zIndex: zIndexStyle,
+                pointerEvents,
+              }}
+              className={`absolute top-0 bottom-0 w-[88%] max-w-[340px] sm:max-w-[380px] transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                isCenter
+                  ? 'translate-x-0 scale-100'
+                  : isLeft
+                  ? '-translate-x-[105%] sm:-translate-x-[340px] md:-translate-x-[370px] scale-90 sm:scale-95'
+                  : isRight
+                  ? 'translate-x-[105%] sm:translate-x-[340px] md:translate-x-[370px] scale-90 sm:scale-95'
+                  : 'translate-x-0 scale-75 opacity-0'
+              }`}
+            >
+              <TestimonialCard
+                item={item}
+                isCenter={isCenter}
+                onClick={() => {
+                  if (isLeft) prev();
+                  if (isRight) next();
+                }}
+              />
+            </div>
+          );
+        })}
       </div>
 
-      {/* Arrow buttons */}
+      {/* Arrow Navigation Buttons dengan Efek Klik Responsif & Animasi Sentuh */}
       <button
+        type="button"
         onClick={prev}
         aria-label="Previous testimonial"
-        className="absolute left-0 sm:-left-6 top-1/2 -translate-y-1/2 w-10 h-10 bg-white rounded-full shadow-md flex items-center justify-center text-[#30242D] hover:bg-[#F5F0F7] transition-colors z-20"
+        className="group absolute -left-2 sm:-left-6 top-1/2 -translate-y-1/2 w-11 h-11 bg-white hover:bg-[#3B122D] text-[#30242D] hover:text-white rounded-full shadow-md flex items-center justify-center transition-all duration-200 active:scale-80 hover:scale-105 active:shadow-inner cursor-pointer z-30 focus:outline-none focus:ring-2 focus:ring-[#3B122D]/40"
       >
-        <ChevronLeft size={18} />
-      </button>
-      <button
-        onClick={next}
-        aria-label="Next testimonial"
-        className="absolute right-0 sm:-right-6 top-1/2 -translate-y-1/2 w-10 h-10 bg-white rounded-full shadow-md flex items-center justify-center text-[#30242D] hover:bg-[#F5F0F7] transition-colors z-20"
-      >
-        <ChevronRight size={18} />
+        <ChevronLeft
+          size={20}
+          className="stroke-[2.2] transition-transform duration-150 group-hover:-translate-x-0.5 group-active:-translate-x-1"
+        />
       </button>
 
-      {/* Dot indicators */}
-      <div className="flex justify-center gap-2 mt-8">
+      <button
+        type="button"
+        onClick={next}
+        aria-label="Next testimonial"
+        className="group absolute -right-2 sm:-right-6 top-1/2 -translate-y-1/2 w-11 h-11 bg-white hover:bg-[#3B122D] text-[#30242D] hover:text-white rounded-full shadow-md flex items-center justify-center transition-all duration-200 active:scale-80 hover:scale-105 active:shadow-inner cursor-pointer z-30 focus:outline-none focus:ring-2 focus:ring-[#3B122D]/40"
+      >
+        <ChevronRight
+          size={20}
+          className="stroke-[2.2] transition-transform duration-150 group-hover:translate-x-0.5 group-active:translate-x-1"
+        />
+      </button>
+
+      {/* Dot Indicators */}
+      <div className="flex justify-center items-center gap-2 mt-8">
         {items.map((_, i) => (
           <button
             key={i}
+            type="button"
             onClick={() => setActive(i)}
             aria-label={`Go to testimonial ${i + 1}`}
-            className={`rounded-full transition-all duration-300 ${
+            className={`rounded-full transition-all duration-300 active:scale-75 ${
               i === active
-                ? 'w-6 h-2 bg-[#3B122D]'
-                : 'w-2 h-2 bg-[#EAE3E9] hover:bg-[#D9B7CC]'
+                ? 'w-7 h-2.5 bg-[#3B122D] shadow-xs'
+                : 'w-2.5 h-2.5 bg-[#EAE3E9] hover:bg-[#D9B7CC] hover:scale-125'
             }`}
           />
         ))}
@@ -139,13 +221,13 @@ export function TestimonialsSection() {
   return (
     <section className="py-16 md:py-24 max-w-container mx-auto px-4 sm:px-6 lg:px-8 text-center bg-white">
       <RevealSection className="w-full">
-        <span className="text-[11px] uppercase tracking-[0.2em] text-secondaryText font-semibold mb-1 block">
+        <span className="text-[11px] font-roboto uppercase tracking-[0.2em] text-secondaryText font-semibold mb-1 block">
           CLIENT FEEDBACK
         </span>
-        <h2 className="font-serif text-3xl sm:text-4xl font-normal text-primaryText mb-12">
+        <h2 className="font-heading text-3xl sm:text-4xl font-semibold text-primaryText mb-12">
           Customer Testimonials
         </h2>
-        <div className="relative px-8 sm:px-12">
+        <div className="relative px-4 sm:px-10">
           <TestimonialCarousel items={TESTIMONIALS} />
         </div>
       </RevealSection>
@@ -154,4 +236,3 @@ export function TestimonialsSection() {
 }
 
 export default TestimonialsSection;
-

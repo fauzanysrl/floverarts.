@@ -1,46 +1,64 @@
 const midtransClient = require('midtrans-client');
 const crypto = require('crypto');
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 
-const serverKey = process.env.MIDTRANS_SERVER_KEY || 'SB-Mid-server-FloverArtsDev12345678';
-const clientKey = process.env.MIDTRANS_CLIENT_KEY || 'SB-Mid-client-FloverArtsDev12345678';
-const isProduction = process.env.MIDTRANS_IS_PRODUCTION === 'true';
+function getCredentials() {
+  const serverKey = process.env.MIDTRANS_SERVER_KEY || 'SB-Mid-server-UU.oPBSj2B1NvZo6vqYetSrC';
+  const clientKey = process.env.MIDTRANS_CLIENT_KEY || 'Mid-client-eb2fGHRiwm6ty0xW';
+  const isProduction = process.env.MIDTRANS_IS_PRODUCTION === 'true';
+  return { serverKey, clientKey, isProduction };
+}
 
-// Inisialisasi Klien Midtrans Snap SDK
-const snap = new midtransClient.Snap({
-  isProduction,
-  serverKey,
-  clientKey
-});
+function getCoreApi() {
+  const { serverKey, clientKey, isProduction } = getCredentials();
+  return new midtransClient.CoreApi({
+    isProduction,
+    serverKey,
+    clientKey
+  });
+}
+
+function getSnap() {
+  const { serverKey, clientKey, isProduction } = getCredentials();
+  return new midtransClient.Snap({
+    isProduction,
+    serverKey,
+    clientKey
+  });
+}
+
+const snap = getSnap();
+const coreApi = getCoreApi();
 
 /**
  * Helper Verifikasi Keaslian Signature Key SHA-512 dari Webhook Notifikasi Midtrans
- * Formula baku keamanan: SHA512(order_id + status_code + gross_amount + ServerKey)
  */
 function verifySignatureKey(orderId, statusCode, grossAmount, signatureKey) {
   if (!orderId || !statusCode || !grossAmount || !signatureKey) {
     return false;
   }
-
-  // Format grossAmount dipastikan string sesuai format payload gateway
+  const { serverKey } = getCredentials();
   const payloadStr = `${orderId}${statusCode}${grossAmount}${serverKey}`;
   const calculatedSignature = crypto.createHash('sha512').update(payloadStr).digest('hex');
 
   return calculatedSignature.toLowerCase() === signatureKey.toLowerCase();
 }
 
-/**
- * Helper untuk menghitung nilai Signature Key SHA-512 (berguna untuk pengujian unit & integrasi)
- */
 function calculateSignatureKey(orderId, statusCode, grossAmount) {
+  const { serverKey } = getCredentials();
   const payloadStr = `${orderId}${statusCode}${grossAmount}${serverKey}`;
   return crypto.createHash('sha512').update(payloadStr).digest('hex');
 }
 
 module.exports = {
   snap,
-  serverKey,
-  clientKey,
+  coreApi,
+  getCoreApi,
+  getSnap,
+  getCredentials,
+  serverKey: process.env.MIDTRANS_SERVER_KEY || 'SB-Mid-server-UU.oPBSj2B1NvZo6vqYetSrC',
+  clientKey: process.env.MIDTRANS_CLIENT_KEY || 'Mid-client-eb2fGHRiwm6ty0xW',
   verifySignatureKey,
   calculateSignatureKey
 };

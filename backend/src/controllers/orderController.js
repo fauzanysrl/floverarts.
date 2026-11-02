@@ -22,6 +22,7 @@ async function checkout(req, res, next) {
       delivery_date,
       delivery_time,
       notes,
+      payment_method = 'bank_transfer',
       items: directItems
     } = req.body;
 
@@ -34,6 +35,21 @@ async function checkout(req, res, next) {
     if (fulfillment_method === 'delivery' && (!delivery_address || delivery_address.trim() === '')) {
       await connection.rollback();
       return res.error('Alamat pengiriman wajib diisi untuk metode pengiriman (delivery).', 'VALIDATION_ERROR', 422);
+    }
+
+    // Ekstraksi jam yang aman untuk format kolom TIME MySQL
+    let cleanDeliveryTime = null;
+    if (delivery_time) {
+      const timeMatch = String(delivery_time).match(/(\d{2}:\d{2})/);
+      if (timeMatch) {
+        cleanDeliveryTime = `${timeMatch[1]}:00`;
+      }
+    }
+
+    // Gabungkan info waktu dan pesan ke dalam notes jika perlu
+    let consolidatedNotes = notes ? notes.trim() : '';
+    if (delivery_time && delivery_time.includes('-') && !consolidatedNotes.includes(delivery_time)) {
+      consolidatedNotes = `[Jadwal: ${delivery_time}] ${consolidatedNotes}`.trim();
     }
 
     // Ambil item pesanan dari direct payload (buy now) atau keranjang belanja aktif pengguna
@@ -135,12 +151,21 @@ async function checkout(req, res, next) {
         recipient_phone.trim(),
         delivery_address ? delivery_address.trim() : '-',
         delivery_date,
-        delivery_time || null,
-        notes || null
+        cleanDeliveryTime,
+        consolidatedNotes || null
       ]
     );
 
     const orderId = orderRes.insertId;
+
+    // Catat inisialisasi pembayaran manual (bank_transfer atau qris)
+    const gatewayOrderId = `${orderNumber}-1`;
+    await connection.query(
+      `INSERT INTO payments 
+        (order_id, gateway, gateway_order_id, payment_type, amount, status)
+       VALUES (?, 'manual', ?, ?, ?, 'menunggu_pembayaran')`,
+      [orderId, gatewayOrderId, payment_method, calculatedTotal]
+    );
 
     // Simpan rincian order items dengan snapshot harga
     for (const rItem of resolvedOrderItems) {
@@ -207,18 +232,47 @@ async function getMyOrders(req, res, next) {
 
     const [orders] = await pool.query(
       `SELECT o.id, o.order_number, o.total_amount, o.payment_status, o.order_status,
-              o.fulfillment_method, o.recipient_name, o.delivery_date, o.courier, o.tracking_number,
-              o.created_at,
-              COUNT(oi.id) AS total_items
+              o.fulfillment_method, o.recipient_name, o.delivery_address, o.delivery_date, o.courier, o.tracking_number,
+              o.created_at
        FROM orders o
-       LEFT JOIN order_items oi ON oi.order_id = o.id
        WHERE o.user_id = ?
-       GROUP BY o.id
        ORDER BY o.id DESC`,
       [userId]
     );
 
-    return res.success(orders, 'Daftar riwayat pesanan berhasil dimuat.');
+    if (!orders || orders.length === 0) {
+      return res.success([], 'Daftar riwayat pesanan berhasil dimuat.');
+    }
+
+    const orderIds = orders.map(o => o.id);
+    const [items] = await pool.query(
+      `SELECT oi.id, oi.order_id, oi.product_id, oi.item_type, oi.product_name_snapshot,
+              oi.unit_price_snapshot, oi.quantity, oi.subtotal, oi.custom_details,
+              p.image_url
+       FROM order_items oi
+       LEFT JOIN products p ON p.id = oi.product_id
+       WHERE oi.order_id IN (?)`,
+      [orderIds]
+    );
+
+    const itemsByOrderId = {};
+    for (const item of items) {
+      if (!itemsByOrderId[item.order_id]) {
+        itemsByOrderId[item.order_id] = [];
+      }
+      itemsByOrderId[item.order_id].push({
+        ...item,
+        custom_details: typeof item.custom_details === 'string' ? JSON.parse(item.custom_details) : item.custom_details
+      });
+    }
+
+    const ordersWithItems = orders.map(order => ({
+      ...order,
+      total_items: itemsByOrderId[order.id]?.length || 0,
+      items: itemsByOrderId[order.id] || []
+    }));
+
+    return res.success(ordersWithItems, 'Daftar riwayat pesanan berhasil dimuat.');
   } catch (error) {
     next(error);
   }
@@ -231,8 +285,8 @@ async function getMyOrderDetail(req, res, next) {
     const { id } = req.params;
 
     const [orders] = await pool.query(
-      'SELECT * FROM orders WHERE id = ? AND user_id = ?',
-      [id, userId]
+      'SELECT * FROM orders WHERE (id = ? OR order_number = ?) AND user_id = ?',
+      [id, id, userId]
     );
 
     if (!orders || orders.length === 0) {
@@ -242,8 +296,11 @@ async function getMyOrderDetail(req, res, next) {
     const order = orders[0];
 
     const [items] = await pool.query(
-      'SELECT * FROM order_items WHERE order_id = ?',
-      [id]
+      `SELECT oi.*, p.image_url 
+       FROM order_items oi
+       LEFT JOIN products p ON p.id = oi.product_id
+       WHERE oi.order_id = ?`,
+      [order.id]
     );
 
     const formattedItems = items.map(item => ({

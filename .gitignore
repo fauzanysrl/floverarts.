@@ -33,6 +33,11 @@ backend/uploads/*
 .DS_Store
 Thumbs.db
 
+# Documentation & Planning (Keep only README.md)
+docs/
+*.pdf
+*.docx
+
 # Design originals and temporary deletions
 _originals/
 _to_delete/

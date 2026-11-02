@@ -11,13 +11,13 @@ export function CustomBouquetSection() {
       <RevealSection className="max-w-container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-[#FAF7FB] rounded-[28px] p-8 sm:p-12 md:p-14 shadow-card grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
           <div className="lg:col-span-7 flex flex-col items-start text-left">
-            <span className="text-[11px] uppercase tracking-[0.2em] text-secondaryText font-semibold mb-2">
+            <span className="text-[11px] font-roboto uppercase tracking-[0.2em] text-secondaryText font-semibold mb-2">
               CUSTOM ARRANGEMENT
             </span>
-            <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl font-normal text-primaryText mb-4 leading-tight">
+            <h2 className="font-heading text-3xl sm:text-4xl md:text-5xl font-semibold text-primaryText mb-4 leading-tight">
               Made Especially for You
             </h2>
-            <p className="text-sm sm:text-base text-secondaryText leading-relaxed mb-8 max-w-lg">
+            <p className="text-sm sm:text-base text-secondaryText leading-relaxed mb-8 max-w-lg font-sans">
               Create a bouquet that reflects your personal style. Choose your favorite flowers and make every arrangement meaningful.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 w-full mb-8">
@@ -58,3 +58,4 @@ export function CustomBouquetSection() {
 }
 
 export default CustomBouquetSection;
+
